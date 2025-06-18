@@ -16,6 +16,8 @@ Run the following command from docker on the file location where these files are
 
     Docker compose up
 
+The cqf-ruler fhir api (Swagger) can be found on [localhost:8080/fhir](http://localhost:8080/fhir)
+
 ## License
 
 Copyright 2025+ Nictiz
