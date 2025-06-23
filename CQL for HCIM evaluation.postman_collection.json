@@ -1,0 +1,748 @@
+{
+	"info": {
+		"_postman_id": "940235db-0a39-41ad-b529-2cf8f3b83b28",
+		"name": "CQL for HCIM evaluation",
+		"description": "Both the CQL evaluate operation and the Library evaluate operation are represented in these examples. The variables for library and data source are already set to [http://host.docker.internal:8080/fhir/](http://host.docker.internal:8080/fhir/).\n\n- CQL evaluate operation: This folder contains a POST to run the CQL evaluate operation. The CQL expression in the body is set to the variable 'CQLString'. Adjust this variable to change the CQL to be excuted.\n    \n- Library evaluate operation: This folder contains a POST to upload a library to the server, a GET to check if the library is there, and a POST to run the Library evaluate operation for a specific library on the server. The last two require the id of the library, replace \\[id\\] with the actual id.\n    \n- Simple examples CQL evaluate: This folder contains three simple examples that should always work with an active FHIR server. The first one counts the amount of patients, the second one calculates how many Observations are of type body height, and the last one calculates how many body height observations have a value from the valueset. This valueset is public and no access to a specific terminology server is needed.\n    \n- Example 1: This folder contains the first example from the corresponding thesis, examining how often the value is coming from a certain valueset. A connection with the Dutch Terminology Server is required. Fill in the username and password in the variables for this connection.\n    \n- Example 2: This folder contains the first example from the corresponding thesis, examining the amount of times a data element is used.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42655553"
+	},
+	"item": [
+		{
+			"name": "CQL evaluate operation",
+			"item": [
+				{
+					"name": "Run CQL evaluate",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"{{CQLstring}}\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "This runs the CQL evaluate operation. The variable 'CQL string' can be adjusted to change what is executed. This variable has to be a single CQL string, without use of \"."
+		},
+		{
+			"name": "Library evaluate operation",
+			"item": [
+				{
+					"name": "New Library",
+					"protocolProfileBehavior": {
+						"disabledSystemHeaders": {
+							"content-type": true
+						}
+					},
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/fhir+json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Library\",\r\n  \"id\": \"NewTest2\",\r\n  \"url\": \"localhost:8080/fhir/Library/NewTest2\",\r\n  \"version\": \"1.0.0\",\r\n  \"name\": \"NewTest2\",\r\n  \"status\": \"active\",\r\n  \"type\": {\r\n  \"coding\": [\r\n    {\r\n      \"system\": \"http://terminology.hl7.org/CodeSystem/library-type\",\r\n      \"code\": \"logic-library\",\r\n      \"display\": \"Logic Library\"\r\n    }\r\n  ],\r\n  \"text\": \"Logic Library\"\r\n  },\r\n\r\n  \"content\": [\r\n    {\r\n      \"contentType\": \"text/cql\",\r\n      \"data\": \"{{cqlData}}\"\r\n    },\r\n    {\r\n      \"contentType\": \"application/elm+json\",\r\n      \"data\": \"{{elmData}}\"\r\n    }\r\n  ]\r\n}\r\n\r\n"
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/Library",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"Library"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get CQL Library",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/fhir/Library/[id]",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"Library",
+								"[id]"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run CQL Library evaluate",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n        \"library\": \"MyTestLibrary\"\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/fhir/Library/[id]/$evaluate",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"Library",
+								"[id]",
+								"$evaluate"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "This runs the Library evaluate operation. Beforehand, the library must be posted with the POST New Library. The library has to be 64-encoded.\n\n- POST New Library: Post a library to the server by changing the variable cqlData to a 64-encoded CQL library\n    \n- GET CQL Library: Get the posted library by finishing the URL with the ID of the posted library\n    \n- POST RUN CQL Library evaluate: run the CQL by finishing the URL with the id of the posted library"
+		},
+		{
+			"name": "Simple examples CQL evaluate",
+			"item": [
+				{
+					"name": "Run CQL evaluate (patient count)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"library patientCount version '1.0.0' using FHIR version '4.0.1' include FHIRHelpers version '4.0.1' define allPatients: Count([Patient])\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run CQL evaluate (body height count)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"library bodyheightExistingCheck version '1.0.0' using FHIR version '4.0.1' include FHIRHelpers version '4.0.1' define bodyheightObservations: Count(distinct [Observation] O where exists (O.code.coding C where C.code = '8302-2')) define allObservations: Count([Observation]) define bodyheightPercentage: (bodyheightObservations / allObservations) * 100\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Run CQL evaluate (value set check)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"library ValuesetCheck version '1.0.0' using FHIR version '4.0.1' include FHIRHelpers version '4.0.1'valueset ObservationCategory: 'http://hl7.org/fhir/ValueSet/observation-category' define ValidCategoryObservations: Count( [Observation] O where exists ( O.category.coding C where C in ObservationCategory)) define AllObservations: Count([Observation]) define validCategoryObservationsPercentage: (ValidCategoryObservations / AllObservations) * 100\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "These are examples of the CQL evaluate operation. These examples can be run individually and without adjustments.\n\n- POST Run CQL (patient count): counts the number of patients\n    \n- POST Run CQL (body height): counts the number of observations of type body height, counts the number of observations in total, and calculates the percentage of body height observations\n    \n- POST Run CQL (value set check): counts the number of observations with a category from the valueset, counts the number of observations in total, and calculates the percentage of observations with a category from the valueset"
+		},
+		{
+			"name": "Example 1",
+			"item": [
+				{
+					"name": "Run CQL evaluate (example 1)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"library CodelistTemperatureTypeCheck version '1.0.0' using FHIR version '4.0.1' include FHIRHelpers version '4.0.1' valueset TemperatureTypeCodelist: 'http://decor.nictiz.nl/fhir/ValueSet/2.16.840.1.113883.2.4.3.11.60.40.2.12.6.1--20171231000000' define temperatureTypeCodelistCount: Count(distinct [Observation] O where exists (O.code.coding C where C.code = '8310-5') and exists (O.method.coding C where C in TemperatureTypeCodelist)) define allTemperatureTypes: Count(distinct [Observation] O where exists (O.code.coding C where C.code = '8310-5') and O.method is not null) define validCategoryObservationsPercentage:    (temperatureTypeCodelistCount / allTemperatureTypes) * 100\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "This is an example of the CQL evaluate operation with a test that validates if a value from TemperatureTypeCodelist is used."
+		},
+		{
+			"name": "Example 2",
+			"item": [
+				{
+					"name": "Run CQL evaluate (example 2)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+									"\r",
+									"let getTokenRequest = {\r",
+									"    method: 'POST',\r",
+									"    url: tokenUrl,\r",
+									"    header: {\r",
+									"        'Accept': 'application/json',\r",
+									"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+									"    },\r",
+									"    body: {\r",
+									"        mode: 'urlencoded',\r",
+									"        urlencoded: [\r",
+									"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+									"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+									"            { key: \"client_id\", value: 'cli_client' },\r",
+									"            { key: \"client_secret\", value: '' },\r",
+									"            { key: 'grant_type', value: 'password' },\r",
+									"        ]\r",
+									"    }\r",
+									"};\r",
+									"\r",
+									"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+									"    let jsonResponse = response.json(),\r",
+									"        newAccessToken = jsonResponse.access_token;\r",
+									"\r",
+									"    console.log({ err, jsonResponse, newAccessToken })\r",
+									"\r",
+									"    pm.environment.set('accessToken', newAccessToken);\r",
+									"    pm.variables.set('accessToken', newAccessToken);\r",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"resourceType\": \"Parameters\",\r\n  \"parameter\": [\r\n    {\r\n      \"name\": \"content\",\r\n      \"valueString\": \"library temperatureCommentExistingCheck version '1.0.0' using FHIR version '4.0.1' include FHIRHelpers version '4.0.1' define temperatureCommentCount: Count(distinct [Observation] O where exists (O.code.coding C where C.code = '8310-5') and exists (O.note) return O.subject) define allBodyTemperatures: Count(distinct [Observation] O where exists (O.code.coding C where C.code = '8310-5') return O.subject) define temperatureCommentPercentage: (temperatureCommentCount / allBodyTemperatures) * 100\"\r\n    },\r\n    {\r\n      \"name\": \"subject\",\r\n      \"valueString\": {{Patient}}\r\n    },\r\n    {\r\n      \"name\": \"dataEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{dataSourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"terminologyEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{terminologyUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\",\r\n        \"Authorization: Bearer {{accessToken}}\"   \r\n        ]\r\n      }\r\n    },\r\n    {\r\n      \"name\": \"contentEndpoint\",\r\n      \"resource\": {\r\n        \"resourceType\": \"Endpoint\",\r\n        \"status\": \"active\",\r\n        \"connectionType\": {\r\n          \"system\": \"http://terminology.hl7.org/CodeSystem/endpoint-connection-type\",\r\n          \"code\": \"hl7-fhir-rest\"\r\n        },\r\n        \"address\": \"{{librarySourceUri}}\",\r\n        \"header\": [\r\n          \"Content-Type: application/json\"\r\n        ]\r\n      }\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "localhost:8080/fhir/$cql",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"fhir",
+								"$cql"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "This is an example of the CQL evaluate operation where is tested if the data element comment is used for Observations of type bodytemperature."
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					"let tokenUrl = 'https://terminologieserver.nl/auth/realms/nictiz/protocol/openid-connect/token';\r",
+					"\r",
+					"let getTokenRequest = {\r",
+					"    method: 'POST',\r",
+					"    url: tokenUrl,\r",
+					"    header: {\r",
+					"        'Accept': 'application/json',\r",
+					"        'Content-Type': 'application/x-www-form-urlencoded',\r",
+					"    },\r",
+					"    body: {\r",
+					"        mode: 'urlencoded',\r",
+					"        urlencoded: [\r",
+					"            { key: \"username\", value: pm.variables.get(\"username\") },\r",
+					"            { key: \"password\", value: pm.variables.get(\"password\") },\r",
+					"            { key: \"client_id\", value: 'cli_client' },\r",
+					"            { key: \"client_secret\", value: '' },\r",
+					"            { key: 'grant_type', value: 'password' },\r",
+					"        ]\r",
+					"    }\r",
+					"};\r",
+					"\r",
+					"pm.sendRequest(getTokenRequest, (err, response) => {\r",
+					"    let jsonResponse = response.json(),\r",
+					"        newAccessToken = jsonResponse.access_token;\r",
+					"\r",
+					"    console.log({ err, jsonResponse, newAccessToken })\r",
+					"\r",
+					"    pm.environment.set('accessToken', newAccessToken);\r",
+					"    pm.variables.set('accessToken', newAccessToken);\r",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "CQLstring",
+			"value": "library Welcome version '1.0.0' define Simple Multiply: 5*5 define Simple Message: 'Hello World!'",
+			"type": "default"
+		},
+		{
+			"key": "librarySourceUri",
+			"value": "http://host.docker.internal:8080/fhir/",
+			"type": "default"
+		},
+		{
+			"key": "terminologyUri",
+			"value": "https://terminologieserver.nl/fhir",
+			"type": "default"
+		},
+		{
+			"key": "dataSourceUri",
+			"value": "http://host.docker.internal:8080/fhir/",
+			"type": "default"
+		},
+		{
+			"key": "Patient",
+			"value": "\"\"",
+			"type": "default"
+		},
+		{
+			"key": "username",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "url",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cqlData",
+			"value": "ewogICJsaWJyYXJ5IjogewogICAgImFubm90YXRpb24iOiBbCiAgICAgIHsKICAgICAgICAidHJhbnNsYXRvck9wdGlvbnMiOiAiIiwKICAgICAgICAidHlwZSI6ICJDcWxUb0VsbUluZm8iCiAgICAgIH0KICAgIF0sCiAgICAiaWRlbnRpZmllciI6IHsKICAgICAgImlkIjogIkxpYnJhcnlPbmUiCiAgICB9LAogICAgInNjaGVtYUlkZW50aWZpZXIiOiB7CiAgICAgICJpZCI6ICJ1cm46aGw3LW9yZzplbG0iLAogICAgICAidmVyc2lvbiI6ICJyMSIKICAgIH0sCiAgICAidXNpbmdzIjogewogICAgICAiZGVmIjogWwogICAgICAgIHsKICAgICAgICAgICJsb2NhbElkZW50aWZpZXIiOiAiU3lzdGVtIiwKICAgICAgICAgICJ1cmkiOiAidXJuOmhsNy1vcmc6ZWxtLXR5cGVzOnIxIgogICAgICAgIH0sCiAgICAgICAgewogICAgICAgICAgImxvY2FsSWRlbnRpZmllciI6ICJGSElSIiwKICAgICAgICAgICJ1cmkiOiAiaHR0cDovL2hsNy5vcmcvZmhpciIsCiAgICAgICAgICAidmVyc2lvbiI6ICI0LjAuMSIKICAgICAgICB9CiAgICAgIF0KICAgIH0sCiAgICAiaW5jbHVkZXMiOiB7CiAgICAgICJkZWYiOiBbCiAgICAgICAgewogICAgICAgICAgImxvY2FsSWRlbnRpZmllciI6ICJGSElSSGVscGVycyIsCiAgICAgICAgICAicGF0aCI6ICJGSElSSGVscGVycyIsCiAgICAgICAgICAidmVyc2lvbiI6ICI0LjAuMSIKICAgICAgICB9CiAgICAgIF0KICAgIH0sCiAgICAic3RhdGVtZW50cyI6IHsKICAgICAgImRlZiI6IFsKICAgICAgICB7CiAgICAgICAgICAibmFtZSI6ICJ0ZXN0IiwKICAgICAgICAgICJjb250ZXh0IjogIlBhdGllbnQiLAogICAgICAgICAgImFjY2Vzc0xldmVsIjogIlB1YmxpYyIsCiAgICAgICAgICAiZXhwcmVzc2lvbiI6IHsKICAgICAgICAgICAgInZhbHVlVHlwZSI6ICJ7dXJuOmhsNy1vcmc6ZWxtLXR5cGVzOnIxfVN0cmluZyIsCiAgICAgICAgICAgICJ2YWx1ZSI6ICJIZWxsbyB3b3JsZCIsCiAgICAgICAgICAgICJ0eXBlIjogIkxpdGVyYWwiCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICBdCiAgICB9CiAgfQp9",
+			"type": "string"
+		},
+		{
+			"key": "elmData",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
