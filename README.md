@@ -1,7 +1,7 @@
 
 # Installation
 Install CQF ruler and Synthea contianers and deploy in Docker. The FHIR server should be locally available at port 8080, check if this is the case. 
-*"docker ps"*
+`docker ps`
 
 Both containers should be on the same network. Right now, the containers expect a network named web to be there.
 Create web with 
