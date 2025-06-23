@@ -1,0 +1,42 @@
+version: '3.7'
+services:
+  node-fhir-test-data-populator:
+    image: ghcr.io/privateaim/node-fhir-test-data-populator:latest
+    networks:
+      - web
+    # build: .
+    environment:
+      CLEAR_TESTDATA_DIRS: ${CLEAR_TESTDATA_DIRS:-"true"}
+      # SYNTHEA GENERATION
+      ENABLE_GENERATE_SYNTHEA_DATA: ${ENABLE_GENERATE_SYNTHEA_DATA:-"true"}
+      N_PATIENTS: ${SYNTHEA_N_PATIENTS:-10}
+      SEED: ${SYNTHEA_SEED:-3256262546}
+      CLINICIAN_SEED: ${SYNTHEA_CLINICIAN_SEED:-3726451}
+      # PROCESSING OF TESTDATA
+      TIMEOUT: ${TIMEOUT:-1}
+      ENABLE_PROCESS_TESTDATA: ${ENABLE_PROCESS_TESTDATA:-"true"}
+      GZIP_PROCESSED_OUTPUT_FILES: ${GZIP_PROCESSED_OUTPUT_FILES:-"false"}
+      REMOVE_INPUTFILES_PROCESSING: ${REMOVE_INPUTFILES_PROCESSING:-"false"}
+      RELEVANT_RESOURCES: ${RELEVANT_RESOURCES:-"Patient,Encounter,Observation,Condition,DiagnosticReport,Medication,MedicationAdministration,Procedure"}
+      # SENDING TO FHIR
+      ENABLE_SENT_DATA_TO_FHIR: ${ENABLE_SENT_DATA_TO_FHIR:-"true"}
+      GZIPPED_FHIR_SEND_INPUT_FILES: ${GZIPPED_FHIR_SEND_INPUT_FILES:-"false"}
+      REMOVE_INPUTFILES_FHIR_SENDING: ${REMOVE_INPUTFILES_FHIR_SENDING:-"false"}
+      FHIR_URL: ${FHIR_URL:-"http://localhost:8080/fhir"}
+      FHIR_USER: ${FHIR_USER:-""}
+      FHIR_PW: ${FHIR_PW:-""}
+    volumes:
+      - "./generated-testdata:/gen/output"
+      - "./synthea.properties:/gen/synthea.properties"
+      - "./docker-entrypoint.sh:/gen/docker-entrypoint.sh"
+      - "./project/testdata-post-processing.py:/gen/testdata-post-processing.py"
+      - "./project/continuously-load-testdata.py:/gen/continuously-load-testdata.py"
+networks:
+  web:
+    external: true
+
+
+
+
+
+
